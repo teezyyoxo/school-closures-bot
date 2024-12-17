@@ -24,7 +24,7 @@ class SchoolClosuresBot(discord.Client):
         else:
             print(f"Failed to access channel: {CHANNEL_ID}. Ensure the channel ID is correct and the bot has permissions.")
 
-    async def send_school_closures(self):
+      async def send_school_closures(self):
         """Fetch closures and send matching results to the Discord channel."""
         print("Fetching school closures...")  # Debugging line to ensure the function is called
         channel = self.get_channel(CHANNEL_ID)
