@@ -45,6 +45,8 @@ async def on_message(message):
     """Respond to user commands."""
     if message.author == bot.user:
         return
+# because debugging
+    print(f"Received message: {message.content}")  # Debugging line
 
     # User command: !check
     if message.content.lower() == '!check':
