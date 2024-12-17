@@ -1,7 +1,8 @@
 import discord
 import os
 from dotenv import load_dotenv
-from scraper import fetch_school_closures  # Ensure scraper.py is in the same directory and up-to-date
+# Ensure scraper.py is in the same directory and up-to-date
+from scraperNBC import fetch_school_closures
 
 # MAKE SURE YOU HAVE A .ENV IN THE SAME FOLDER, BECAUSE WE'RE LOADING IT HERE:
 load_dotenv()
