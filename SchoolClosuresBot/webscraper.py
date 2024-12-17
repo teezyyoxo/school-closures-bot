@@ -1,44 +1,37 @@
+# i can't figure out the libreSSL nonsense. error doesn't show when run with python3.9, but does with python3.
+# so, the below will suppress the error messaging:
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module='urllib3')
+# phew.
+
 import requests
 from bs4 import BeautifulSoup
 
 def fetch_school_closures():
-    url = "https://www.nbcconnecticut.com/weather/school-closures/"
+    url = "https://web.archive.org/web/20241212072827/https://www.nbcconnecticut.com/weather/school-closings/"
     
     # Fetch the page content
     response = requests.get(url)
     
-    # Ensure we successfully retrieved the page
     if response.status_code != 200:
         print("Failed to retrieve the webpage.")
         return []
 
-    # Parse the HTML content of the page
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Debugging: Print the HTML content or part of it
-    # This will help you identify the structure of the webpage
-    # Uncomment the next line to view the raw HTML
-    print(soup.prettify())
-
-    # Find all schools (check for a different class if 'school-name' is incorrect)
-    closures = soup.find_all('div', class_='school-name')
-    delays = soup.find_all('div', class_='delay-status')  # Update this selector if necessary
-
-    # Debugging: Print what we found
-    print(f"Found {len(closures)} closures.")
-    print(f"Found {len(delays)} delays.")
+    # Find the section that contains the school closures
+    closures_section = soup.find_all('div', class_='listing')
 
     school_data = []
 
-    # Check if closures and delays match in length
-    if len(closures) != len(delays):
-        print("Warning: The number of closures and delays do not match.")
+    # Loop through each listing to extract the school name and status
+    for closure in closures_section:
+        school_name = closure.find('h4', class_='listing__org').text.strip()
+        status = closure.find('p', class_='listing__notice').text.strip()
 
-    # Zip the closures and delays together and extract relevant info
-    for school, delay in zip(closures, delays):
         school_data.append({
-            'school': school.text.strip(),
-            'status': delay.text.strip()
+            'school': school_name,
+            'status': status
         })
 
     return school_data
