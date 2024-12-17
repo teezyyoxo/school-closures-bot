@@ -51,6 +51,7 @@ bot = SchoolClosuresBot(intents=intents)
 
 @bot.event
 @bot.event
+@bot.event
 async def on_message(message):
     # Ignore messages from the bot itself
     if message.author == bot.user:
@@ -62,26 +63,27 @@ async def on_message(message):
     print(f"Channel ID: {message.channel.id}")  # Log the channel ID to verify
     print(f"Message Author: {message.author}")  # Log the message author
 
-    # Debugging: Log whether message content is empty or not
-    if not message.content.strip(): 
-        print(f"Message is empty or contains only whitespace from {message.author} in channel {message.channel.id}")
+    # The live URL will always be used by default
+    url = "https://www.nbcconnecticut.com/weather/school-closings/"
 
-    # Check if the message is the !check command
-    if message.content.strip().lower() == '!check':  # Strip whitespace and check lowercase
+    # Handling message from DM channel
+    if isinstance(message.channel, discord.DMChannel):
+        print(f"Received Direct Message from @{message.author}: {message.content}")
+
+    # Check if the message is the !check test command
+    if message.content.strip().lower() == '!check test':
+        print("Command !check test detected.")  # Debugging line
+        url = "https://web.archive.org/web/20241212072827/https://www.nbcconnecticut.com/weather/school-closings/"  # Test URL
+        print(f"Using test URL: {url}")  # Debugging line
+
+    # Check if the message is the !check command (live URL case)
+    elif message.content.strip().lower() == '!check':
         print("Command !check detected.")  # Debugging line
+        print(f"Using live URL: {url}")  # Debugging line
 
-        # Get the URL from the message, after the command
-        url = message.content[len('!check '):].strip()  # Everything after '!check '
-
-        # If no URL is provided, use the default URL
-        if not url:
-            url = "https://web.archive.org/web/20241212072827/https://www.nbcconnecticut.com/weather/school-closings/"
-
-        print(f"Using URL: {url}")  # Debugging line
-        await bot.send_school_closures(url)  # Pass the URL to the send_school_closures method
-
-    # Ensure other commands are processed properly
-    await bot.process_commands(message)
+    # Send the school closures with the correct URL
+    if message.content.strip().lower() == '!check' or message.content.strip().lower() == '!check test':
+        await bot.send_school_closures(url)
 
 # Start the bot
 bot.run(TOKEN)
