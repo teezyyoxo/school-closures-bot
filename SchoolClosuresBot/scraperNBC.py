@@ -57,5 +57,11 @@ if __name__ == "__main__":
 
     # Fetch and display school closures
     closures = fetch_school_closures(school_closures_url)
+    
+    # Check if no closures were found
+    if not closures:
+        print("No closures or delays found.")
+    
+    # Print closures if any
     for closure in closures:
         print(f"{closure['school']}: {closure['status']}")
