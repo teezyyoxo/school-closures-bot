@@ -7,8 +7,16 @@ warnings.filterwarnings("ignore", category=UserWarning, module='urllib3')
 import requests
 from bs4 import BeautifulSoup
 
+# we're using NBC Connecticut for this one, so the URL is usually this: https://www.nbcconnecticut.com/weather/school-closings/
+# but there are no closings currently, so i have no way to test. so i'm using an archived page from a few days ago for testing.
+# MAKE SURE TO CHANGE THIS!
+school_closures_url = "https://web.archive.org/web/20241212072827/https://www.nbcconnecticut.com/weather/school-closings/"
+
+# Function to fetch school closures
 def fetch_school_closures():
-    url = "https://web.archive.org/web/20241212072827/https://www.nbcconnecticut.com/weather/school-closings/"
+    url = school_closures_url  # Use the variable here
+    # Your code for fetching the school closures goes here
+
     
     # Fetch the page content
     response = requests.get(url)
