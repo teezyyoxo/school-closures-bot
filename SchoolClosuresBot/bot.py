@@ -12,7 +12,7 @@ CHANNEL_ID = int(os.getenv('CHANNEL_ID'))  # Discord channel ID
 SEARCH_CRITERIA = [c.strip().lower() for c in os.getenv('SEARCH_CRITERIA', '').split(',')]  # Comma-separated list of criteria
 
 class SchoolClosuresBot(discord.Client):
-      async def on_ready(self):
+    async def on_ready(self):
         """Triggered when the bot connects to Discord."""
         print(f'Logged in as {self.user}!')
         print(f'Bot is ready and listening for commands.')
@@ -24,7 +24,7 @@ class SchoolClosuresBot(discord.Client):
         else:
             print(f"Failed to access channel: {CHANNEL_ID}. Ensure the channel ID is correct and the bot has permissions.")
 
-      async def send_school_closures(self):
+    async def send_school_closures(self, url):
         """Fetch closures and send matching results to the Discord channel."""
         print("Fetching school closures...")  # Debugging line to ensure the function is called
         channel = self.get_channel(CHANNEL_ID)
@@ -32,8 +32,6 @@ class SchoolClosuresBot(discord.Client):
             print("Channel not found. Check the CHANNEL_ID in your .env file.")
             return
 
-        # Ensure the URL is passed to fetch_school_closures()
-        url = "https://web.archive.org/web/20241212072827/https://www.nbcconnecticut.com/weather/school-closings/"
         closures = fetch_school_closures(url)  # Pass the URL here
         if not closures:
             await channel.send("No closures or delays at the moment.")
@@ -66,7 +64,19 @@ async def on_message(message):
     # Check if the message is the !check command
     if message.content.strip().lower() == '!check':  # Strip whitespace and check lowercase
         print("Command !check detected.")  # Debugging line
-        await bot.send_school_closures()  # Make sure this line is being called
+
+        # Get the URL from the message, after the command
+        url = message.content[len('!check '):].strip()  # Everything after '!check '
+
+        # If no URL is provided, use the default URL
+        if not url:
+            url = "https://web.archive.org/web/20241212072827/https://www.nbcconnecticut.com/weather/school-closings/"
+
+        print(f"Using URL: {url}")  # Debugging line
+        await bot.send_school_closures(url)  # Pass the URL to the send_school_closures method
+
+    # Let discord.py process other commands
+    await bot.process_commands(message)
 
 # Start the bot
 bot.run(TOKEN)
