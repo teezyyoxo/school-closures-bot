@@ -12,9 +12,17 @@ CHANNEL_ID = int(os.getenv('CHANNEL_ID'))  # Discord channel ID
 SEARCH_CRITERIA = [c.strip().lower() for c in os.getenv('SEARCH_CRITERIA', '').split(',')]  # Comma-separated list of criteria
 
 class SchoolClosuresBot(discord.Client):
-    async def on_ready(self):
+      async def on_ready(self):
         """Triggered when the bot connects to Discord."""
         print(f'Logged in as {self.user}!')
+        print(f'Bot is ready and listening for commands.')
+
+        # Debugging: Check if the bot can access the channel
+        channel = self.get_channel(CHANNEL_ID)
+        if channel:
+            print(f"Accessing channel: {channel.name} (ID: {CHANNEL_ID})")
+        else:
+            print(f"Failed to access channel: {CHANNEL_ID}. Ensure the channel ID is correct and the bot has permissions.")
 
     async def send_school_closures(self):
         """Fetch closures and send matching results to the Discord channel."""
