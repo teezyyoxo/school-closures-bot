@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 
 def fetch_school_closures():
-    url = "https://www.nbcconnecticut.com/weather/school-closings/"
+    url = "https://www.nbcconnecticut.com/weather/school-closures/"
     
     # Fetch the page content
     response = requests.get(url)
@@ -15,12 +15,24 @@ def fetch_school_closures():
     # Parse the HTML content of the page
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Inspect the structure of the page to identify where closures are listed.
-    # These selectors may need to be updated if the webpage's structure changes.
-    closures = soup.find_all('div', class_='school-name')  # Change this if the actual tag/class is different
-    delays = soup.find_all('div', class_='delay-status')  # Change this if needed
+    # Debugging: Print the HTML content or part of it
+    # This will help you identify the structure of the webpage
+    # Uncomment the next line to view the raw HTML
+    print(soup.prettify())
+
+    # Find all schools (check for a different class if 'school-name' is incorrect)
+    closures = soup.find_all('div', class_='school-name')
+    delays = soup.find_all('div', class_='delay-status')  # Update this selector if necessary
+
+    # Debugging: Print what we found
+    print(f"Found {len(closures)} closures.")
+    print(f"Found {len(delays)} delays.")
 
     school_data = []
+
+    # Check if closures and delays match in length
+    if len(closures) != len(delays):
+        print("Warning: The number of closures and delays do not match.")
 
     # Zip the closures and delays together and extract relevant info
     for school, delay in zip(closures, delays):
@@ -36,11 +48,3 @@ if __name__ == "__main__":
     closures = fetch_school_closures()
     for closure in closures:
         print(f"{closure['school']}: {closure['status']}")
-
-# bring it aroundddddddddd town
-for school, delay in zip(closures, delays):
-    school_data.append({
-        'school': school.text.strip(),
-        'status': delay.text.strip()
-    })
-
