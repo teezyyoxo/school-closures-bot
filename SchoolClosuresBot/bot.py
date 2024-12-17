@@ -42,14 +42,21 @@ bot = SchoolClosuresBot(intents=intents)
 
 @bot.event
 async def on_message(message):
-    """Respond to user commands."""
+    # Ignore messages from the bot itself
     if message.author == bot.user:
         return
-# because debugging
+
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user}!')
+    print(f'Bot is ready and listening for commands.')
+
+    # Log the message to verify it's being received
     print(f"Received message: {message.content}")  # Debugging line
 
-    # User command: !check
+    # Check if the message is the !check command
     if message.content.lower() == '!check':
+        print("Command !check detected.")  # Debugging line
         await bot.send_school_closures()
 
 # Start the bot
