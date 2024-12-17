@@ -46,11 +46,6 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-@bot.event
-async def on_ready():
-    print(f'Logged in as {bot.user}!')
-    print(f'Bot is ready and listening for commands.')
-
     # Log the message to verify it's being received
     print(f"Received message: {message.content}")  # Debugging line
 
