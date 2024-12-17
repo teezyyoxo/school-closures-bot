@@ -16,12 +16,9 @@ def fetch_school_closures():
     soup = BeautifulSoup(response.text, 'html.parser')
 
     # Inspect the structure of the page to identify where closures are listed.
-    # These selectors may need to be updated if the webpage's structure 
-changes.
-    closures = soup.find_all('div', class_='school-name')  # Change this if the 
-actual tag/class is different
-    delays = soup.find_all('div', class_='delay-status')  # Change this if 
-needed
+    # These selectors may need to be updated if the webpage's structure changes.
+    closures = soup.find_all('div', class_='school-name')  # Change this if the actual tag/class is different
+    delays = soup.find_all('div', class_='delay-status')  # Change this if needed
 
     school_data = []
 
