@@ -75,8 +75,5 @@ async def on_message(message):
         print(f"Using URL: {url}")  # Debugging line
         await bot.send_school_closures(url)  # Pass the URL to the send_school_closures method
 
-    # Let discord.py process other commands
-    await bot.process_commands(message)
-
 # Start the bot
 bot.run(TOKEN)
