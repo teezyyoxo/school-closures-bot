@@ -52,9 +52,8 @@ async def on_message(message):
     # Debugging line to show exact content of the message (including any invisible characters)
     print(f"Received message: {repr(message.content)}")  # Debugging line with repr()
     print(f"Message length: {len(message.content)}")  # Check the length to ensure it's non-empty
-
-    # Log the channel ID to ensure it's the right channel
     print(f"Channel ID: {message.channel.id}")  # Log the channel ID to verify
+    print(f"Message Author: {message.author}")  # Log the message author
 
     # Check if the message is the !check command
     if message.content.strip().lower() == '!check':  # Strip whitespace and check lowercase
