@@ -24,7 +24,9 @@ class SchoolClosuresBot(discord.Client):
             print("Channel not found. Check the CHANNEL_ID in your .env file.")
             return
 
-        closures = fetch_school_closures()
+        # Ensure the URL is passed to fetch_school_closures()
+        url = "https://web.archive.org/web/20241212072827/https://www.nbcconnecticut.com/weather/school-closings/"
+        closures = fetch_school_closures(url)  # Pass the URL here
         if not closures:
             await channel.send("No closures or delays at the moment.")
             return
@@ -47,11 +49,15 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    # Log the message to verify it's being received
-    print(f"Received message: {message.content}")  # Debugging line
+    # Debugging line to show exact content of the message (including any invisible characters)
+    print(f"Received message: {repr(message.content)}")  # Debugging line with repr()
+    print(f"Message length: {len(message.content)}")  # Check the length to ensure it's non-empty
+
+    # Log the channel ID to ensure it's the right channel
+    print(f"Channel ID: {message.channel.id}")  # Log the channel ID to verify
 
     # Check if the message is the !check command
-    if message.content.lower() == '!check':
+    if message.content.strip().lower() == '!check':  # Strip whitespace and check lowercase
         print("Command !check detected.")  # Debugging line
         await bot.send_school_closures()  # Make sure this line is being called
 
