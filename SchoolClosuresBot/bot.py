@@ -50,6 +50,7 @@ intents = discord.Intents.default()  # Basic bot permissions
 bot = SchoolClosuresBot(intents=intents)
 
 @bot.event
+@bot.event
 async def on_message(message):
     # Ignore messages from the bot itself
     if message.author == bot.user:
@@ -61,10 +62,9 @@ async def on_message(message):
     print(f"Channel ID: {message.channel.id}")  # Log the channel ID to verify
     print(f"Message Author: {message.author}")  # Log the message author
 
-    # Handling message from DM channel
-    if isinstance(message.channel, discord.DMChannel):
-        # Display Direct Message differently
-        print(f"Received Direct Message from @{message.author}: {message.content}")
+    # Debugging: Log whether message content is empty or not
+    if not message.content.strip(): 
+        print(f"Message is empty or contains only whitespace from {message.author} in channel {message.channel.id}")
 
     # Check if the message is the !check command
     if message.content.strip().lower() == '!check':  # Strip whitespace and check lowercase
@@ -79,6 +79,9 @@ async def on_message(message):
 
         print(f"Using URL: {url}")  # Debugging line
         await bot.send_school_closures(url)  # Pass the URL to the send_school_closures method
+
+    # Ensure other commands are processed properly
+    await bot.process_commands(message)
 
 # Start the bot
 bot.run(TOKEN)
