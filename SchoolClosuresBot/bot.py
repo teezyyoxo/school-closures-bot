@@ -61,6 +61,11 @@ async def on_message(message):
     print(f"Channel ID: {message.channel.id}")  # Log the channel ID to verify
     print(f"Message Author: {message.author}")  # Log the message author
 
+    # Handling message from DM channel
+    if isinstance(message.channel, discord.DMChannel):
+        # Display Direct Message differently
+        print(f"Received Direct Message from @{message.author}: {message.content}")
+
     # Check if the message is the !check command
     if message.content.strip().lower() == '!check':  # Strip whitespace and check lowercase
         print("Command !check detected.")  # Debugging line
