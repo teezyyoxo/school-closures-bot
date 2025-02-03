@@ -1,7 +1,3 @@
-# useful-discord-bots
-these all probably exist in one way, shape, or form, but *these* are MINE.
-
-
 # SchoolClosuresBot
 
 A Discord bot to send school closure updates and alerts based on districts from NBC Connecticut. This bot allows users to set alerts for specific school districts and receive notifications when closures or delays are reported.
