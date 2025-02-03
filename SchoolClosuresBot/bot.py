@@ -1,9 +1,15 @@
 # School Closures Bot
-# Version 2.3.1
-# Currently configured for NBC Connecticut and all districts within.
 # Created by @PBandJamf
+# Version 2.3.2
+
+# This bot is currently configured for use with NBC Connecticut and all districts within.
+# See districts.json for the current list (parsed/scraped directly from the site around 7am EST on 3 Feb 2025 when most/all closures were posted.)
+# Stay warm, drive safe, and remember: #BlackIceAintLoyal.
 
 # CHANGELOG
+# Version 2.3.2
+# Significantly revised (sic: simplified) the /setalerts interaction.
+
 # Version 2.3.1
 # - Realized a lot of these issues were fixed just by re-inviting the bot to the server.
 # - Fixed issue with 'unknown integration' error by ensuring proper sync of slash commands.
@@ -188,31 +194,8 @@ async def button_callback(interaction: discord.Interaction, district: str):
     user_alerts[interaction.user.id] = user_alerts.get(interaction.user.id, set())
     user_alerts[interaction.user.id].add(district)
     save_user_alerts()
-    await interaction.response.send_message(f"Alerts set for: {district}", ephemeral=True)
-
-    # Ask if the user wants to configure more alerts
-    await interaction.followup.send(
-        "Would you like to configure alerts for another district? (Yes/No)",
-        ephemeral=True
-    )
-
-    # Here we can add buttons for 'Yes' and 'No' for additional configuration
-    yes_button = Button(label="Yes", custom_id="yes")
-    no_button = Button(label="No", custom_id="no")
-
-    yes_button.callback = lambda interaction: prompt_for_more_alerts(interaction)
-    no_button.callback = lambda interaction: finish_alerts_configuration(interaction)
-
-    # Display the 'Yes' and 'No' buttons to the user
-    view = View()
-    view.add_item(yes_button)
-    view.add_item(no_button)
-    await interaction.followup.send("Would you like to configure alerts for more districts?", ephemeral=True, view=view)
-
-async def prompt_for_more_alerts(interaction: discord.Interaction):
-    # If the user wants more alerts, ask them to search again
     await interaction.response.send_message(
-        "Please enter the name of another district you'd like to set alerts for.",
+        f"Alerts set for: {district}\n\nTo add more alerts, please run the `/setalerts` command again.",
         ephemeral=True
     )
 
