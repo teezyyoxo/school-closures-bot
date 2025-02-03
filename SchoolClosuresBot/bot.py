@@ -1,9 +1,35 @@
 # School Closures Bot
-# Version 2.2.1
+# Version 2.3.1
 # Currently configured for NBC Connecticut and all districts within.
 # Created by @PBandJamf
 
 # CHANGELOG
+# Version 2.3.1
+# - Realized a lot of these issues were fixed just by re-inviting the bot to the server.
+# - Fixed issue with 'unknown integration' error by ensuring proper sync of slash commands.
+# - Re-added the `/check` slash command for manually checking school closures.
+# - Removed redundant `!check` command support, keeping only slash commands.
+# - Improved command handling and bot synchronization after startup.
+# - Cleaned up command registration logic to avoid conflicts with existing commands.
+
+# Version 2.3.0
+# - Removed all "!check" commands and logic in favor of slash (/) commands only.
+# - Removed the on_message event logic for "!check".
+# - Streamlined bot to only use slash commands for interaction.
+
+# Version 2.2.2
+# - Added `message_content` intent to access message content in DMs.
+# - This resolves the "Privileged Message Content Intent" warning.
+# - Limited the number of school districts to 25 in the button-based interaction.
+# - This prevents exceeding Discord's maximum of 25 options in interactive messages.
+# - Refined the button callback logic to ensure users can set alerts for multiple districts.
+# - Added follow-up prompts asking users if they want to configure additional alerts after making a selection.
+# - Ensured user alerts are stored persistently in a `user_alerts.json` file, and changes are saved after each update.
+# - Added feedback for users when configuring multiple district alerts.
+# - Created additional buttons for users to decide whether they want to configure more alerts after setting their preferences.
+# - Addressed the issue with multiple district alerts not being stored correctly.
+# - Fixed issues related to sending too many interactive options in the message.
+# - Improved the `/setalerts` command to handle district search and button-based selection more efficiently.
 
 # Version 2.2.1
 # - Corrected issue with matching lookup results. I hope.
@@ -98,7 +124,7 @@ class SchoolClosuresBot(discord.Client):
                 await channel.send("@everyone No closures or delays at the moment.")
                 return
 
-            await channel.send("@everyone Closures detected! DM me `!setalerts [district]` to set up private alerts for specific districts.")
+            await channel.send("@everyone Closures detected! DM me `/setalerts [district]` to set up private alerts for specific districts.")
             
             for user_id, districts in user_alerts.items():
                 user = await self.fetch_user(user_id)
@@ -112,25 +138,12 @@ class SchoolClosuresBot(discord.Client):
 intents = discord.Intents.default()
 bot = SchoolClosuresBot(intents=intents)
 
-# Event handler to listen for messages
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
-        return
-
-    # Handle commands in DMs
-    if isinstance(message.channel, discord.DMChannel):
-        if message.content.startswith("!setalerts"):
-            await message.channel.send("To set your alerts, use the `/setalerts` slash command.")
-        elif message.content == "!check":
-            url = "https://www.nbcconnecticut.com/weather/school-closings/"
-            await bot.send_school_closures(url)
-            await message.channel.send("School closures have been checked and alerts have been sent.")
-    
-    # Make sure to call the default on_message behavior for other commands
-    await bot.process_commands(message)
-
-from discord.ui import Button, View
+# Slash command to check for closures (triggered manually)
+@bot.tree.command(name="check", description="Check for current school closures.")
+async def check(interaction: discord.Interaction):
+    url = "https://www.nbcconnecticut.com/weather/school-closings/"
+    await interaction.client.send_school_closures(url)
+    await interaction.response.send_message("School closures have been checked and alerts have been sent.")
 
 # Slash command to set alerts with search
 @bot.tree.command(name="setalerts", description="Set up your school closure alerts.")
@@ -209,12 +222,6 @@ async def finish_alerts_configuration(interaction: discord.Interaction):
         "Your alert configuration is complete! Stay updated on school closures.",
         ephemeral=True
     )
-# Slash command to check for closures (for testing purposes)
-@bot.tree.command(name="check", description="Check for current school closures.")
-async def check(interaction: discord.Interaction):
-    url = "https://www.nbcconnecticut.com/weather/school-closings/"
-    await bot.send_school_closures(url)
-    await interaction.response.send_message("School closures have been checked and alerts have been sent.")
 
 # Send it.
 bot.run(TOKEN)
