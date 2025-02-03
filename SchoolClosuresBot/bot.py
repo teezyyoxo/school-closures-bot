@@ -1,9 +1,12 @@
 # School Closures Bot
-# Version 2.2.0
+# Version 2.2.1
 # Currently configured for NBC Connecticut and all districts within.
 # Created by @PBandJamf
 
 # CHANGELOG
+
+# Version 2.2.1
+# - Corrected issue with matching lookup results. I hope.
 
 # Version 2.2.0
 # - Moved from paginated alphabet to a search/lookup, since there are a million and a half districts that NBC Connecticut reports on.
@@ -131,50 +134,81 @@ from discord.ui import Button, View
 
 # Slash command to set alerts with search
 @bot.tree.command(name="setalerts", description="Set up your school closure alerts.")
-async def setalerts(interaction: discord.Interaction, district_name: str):
-    # Search through districts
-    matches = [district for district in VALID_DISTRICTS if district_name.lower() in district.lower()]
+async def setalerts(interaction: discord.Interaction, search: str):
+    # Search for districts that match the search query (case-insensitive)
+    matched_districts = [district for district in VALID_DISTRICTS if search.lower() in district.lower()]
 
-    if not matches:
-        await interaction.response.send_message("No matching districts found. Please try again with a different name.", ephemeral=True)
+    if not matched_districts:
+        await interaction.response.send_message("No districts found matching your search.", ephemeral=True)
         return
 
-    if len(matches) == 1:
-        # Automatically add if only one match
+    # If there are multiple matches, display the options with numbered buttons
+    if len(matched_districts) > 1:
+        await interaction.response.send_message(
+            f"Did you mean one of the following districts?\n" +
+            "\n".join([f"{i+1} - {district}" for i, district in enumerate(matched_districts)]),
+            ephemeral=True
+        )
+
+        # Create buttons for each district
+        view = View()
+        for i, district in enumerate(matched_districts):
+            button = Button(label=str(i+1), custom_id=str(i+1))
+            button.callback = lambda interaction, district=district: button_callback(interaction, district)
+            view.add_item(button)
+
+        await interaction.followup.send(
+            "Please select the number corresponding to the district you'd like to receive alerts for.",
+            ephemeral=True, view=view
+        )
+
+    # If only one district matches, proceed with setting alerts immediately
+    elif len(matched_districts) == 1:
+        district = matched_districts[0]
         user_alerts[interaction.user.id] = user_alerts.get(interaction.user.id, set())
-        user_alerts[interaction.user.id].add(matches[0].lower())
+        user_alerts[interaction.user.id].add(district)
         save_user_alerts()
-        await interaction.response.send_message(f"Alerts set for: {matches[0]}", ephemeral=True)
-        return
+        await interaction.response.send_message(f"Alerts set for: {district}", ephemeral=True)
 
-    # If multiple matches, ask for confirmation
-    match_string = "\n".join(matches)
-    await interaction.response.send_message(f"Did you mean one of the following districts?\n{match_string}\n\nPlease confirm with 'Yes' or 'No'.", ephemeral=True)
+# Callback function to handle user selection
+async def button_callback(interaction: discord.Interaction, district: str):
+    user_alerts[interaction.user.id] = user_alerts.get(interaction.user.id, set())
+    user_alerts[interaction.user.id].add(district)
+    save_user_alerts()
+    await interaction.response.send_message(f"Alerts set for: {district}", ephemeral=True)
 
-    # Create buttons for confirmation
+    # Ask if the user wants to configure more alerts
+    await interaction.followup.send(
+        "Would you like to configure alerts for another district? (Yes/No)",
+        ephemeral=True
+    )
+
+    # Here we can add buttons for 'Yes' and 'No' for additional configuration
+    yes_button = Button(label="Yes", custom_id="yes")
+    no_button = Button(label="No", custom_id="no")
+
+    yes_button.callback = lambda interaction: prompt_for_more_alerts(interaction)
+    no_button.callback = lambda interaction: finish_alerts_configuration(interaction)
+
+    # Display the 'Yes' and 'No' buttons to the user
     view = View()
-
-    # "Yes" button to confirm
-    yes_button = Button(label="Yes", style=discord.ButtonStyle.green)
-    async def yes_callback(interaction: discord.Interaction):
-        user_alerts[interaction.user.id] = user_alerts.get(interaction.user.id, set())
-        user_alerts[interaction.user.id].add(matches[0].lower())  # Choose the first match (or let user decide if more matches)
-        save_user_alerts()
-        await interaction.response.send_message(f"Alerts set for: {matches[0]}", ephemeral=True)
-
-    yes_button.callback = yes_callback
     view.add_item(yes_button)
-
-    # "No" button to cancel
-    no_button = Button(label="No", style=discord.ButtonStyle.red)
-    async def no_callback(interaction: discord.Interaction):
-        await interaction.response.send_message("No district selected. Please try again with a different name.", ephemeral=True)
-
-    no_button.callback = no_callback
     view.add_item(no_button)
+    await interaction.followup.send("Would you like to configure alerts for more districts?", ephemeral=True, view=view)
 
-    await interaction.followup.send("Please select 'Yes' to confirm or 'No' to cancel.", view=view)
+async def prompt_for_more_alerts(interaction: discord.Interaction):
+    # If the user wants more alerts, ask them to search again
+    await interaction.response.send_message(
+        "Please enter the name of another district you'd like to set alerts for.",
+        ephemeral=True
+    )
 
+async def finish_alerts_configuration(interaction: discord.Interaction):
+    # If the user is done, let them know
+    await interaction.response.send_message(
+        "Your alert configuration is complete! Stay updated on school closures.",
+        ephemeral=True
+    )
 # Slash command to check for closures (for testing purposes)
 @bot.tree.command(name="check", description="Check for current school closures.")
 async def check(interaction: discord.Interaction):
