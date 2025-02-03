@@ -1,9 +1,14 @@
 # School Closures Bot
-# Version 2.1.0
+# Version 2.2.0
 # Currently configured for NBC Connecticut and all districts within.
 # Created by @PBandJamf
 
 # CHANGELOG
+
+# Version 2.2.0
+# - Moved from paginated alphabet to a search/lookup, since there are a million and a half districts that NBC Connecticut reports on.
+# - /setalerts is now interactive, as a result.
+
 # Version 2.1.0
 # - Users can now choose districts by alphabet range (A-F, G-L, M-R, S-Z) when setting alerts.
 # - The bot now displays district options within the selected alphabet range in a new select menu after choosing a letter range.
@@ -35,7 +40,8 @@
 # - Initial release.
 
 import discord
-from discord import app_commands, Button, View
+from discord import app_commands
+from discord.ui import Button, View
 import os
 import json
 from dotenv import load_dotenv
@@ -121,72 +127,53 @@ async def on_message(message):
     # Make sure to call the default on_message behavior for other commands
     await bot.process_commands(message)
 
+from discord.ui import Button, View
+
+# Slash command to set alerts with search
 @bot.tree.command(name="setalerts", description="Set up your school closure alerts.")
-async def setalerts(interaction: discord.Interaction):
-    # Load the districts from the file
-    districts_file = "districts.json"
-    with open(districts_file, "r") as f:
-        VALID_DISTRICTS = json.load(f)  # Assuming it's just a list
+async def setalerts(interaction: discord.Interaction, district_name: str):
+    # Search through districts
+    matches = [district for district in VALID_DISTRICTS if district_name.lower() in district.lower()]
 
-    # Sort districts alphabetically
-    VALID_DISTRICTS.sort()
+    if not matches:
+        await interaction.response.send_message("No matching districts found. Please try again with a different name.", ephemeral=True)
+        return
 
-    # Split districts into chunks based on the first letter
-    # A-F, G-L, M-R, S-Z
-    ranges = [
-        ("A-F", [district for district in VALID_DISTRICTS if district[0].upper() in "ABCDEF"]),
-        ("G-L", [district for district in VALID_DISTRICTS if district[0].upper() in "GHIJKL"]),
-        ("M-R", [district for district in VALID_DISTRICTS if district[0].upper() in "MNOPQR"]),
-        ("S-Z", [district for district in VALID_DISTRICTS if district[0].upper() in "STUVWXYZ"]),
-    ]
-    
-    # Create the pagination buttons for the user
-    button_labels = [r[0] for r in ranges]
-    buttons = [discord.ui.Button(label=label, custom_id=label) for label in button_labels]
+    if len(matches) == 1:
+        # Automatically add if only one match
+        user_alerts[interaction.user.id] = user_alerts.get(interaction.user.id, set())
+        user_alerts[interaction.user.id].add(matches[0].lower())
+        save_user_alerts()
+        await interaction.response.send_message(f"Alerts set for: {matches[0]}", ephemeral=True)
+        return
 
-    # Create a view for pagination
-    view = discord.ui.View()
+    # If multiple matches, ask for confirmation
+    match_string = "\n".join(matches)
+    await interaction.response.send_message(f"Did you mean one of the following districts?\n{match_string}\n\nPlease confirm with 'Yes' or 'No'.", ephemeral=True)
 
-    # Add buttons to the view
-    for button in buttons:
-        view.add_item(button)
+    # Create buttons for confirmation
+    view = View()
 
-    # Define what happens when a button is clicked
-    async def button_callback(interaction: discord.Interaction):
-        selected_range = next((r for r in ranges if r[0] == interaction.data["custom_id"]), None)
-        if selected_range:
-            range_name, districts_in_range = selected_range
-            # If the user clicked a range, display a new select menu with the districts in that range
-            options = [discord.SelectOption(label=district) for district in districts_in_range]
+    # "Yes" button to confirm
+    yes_button = Button(label="Yes", style=discord.ButtonStyle.green)
+    async def yes_callback(interaction: discord.Interaction):
+        user_alerts[interaction.user.id] = user_alerts.get(interaction.user.id, set())
+        user_alerts[interaction.user.id].add(matches[0].lower())  # Choose the first match (or let user decide if more matches)
+        save_user_alerts()
+        await interaction.response.send_message(f"Alerts set for: {matches[0]}", ephemeral=True)
 
-            # Create select menu for the user
-            select = discord.ui.Select(placeholder=f"Choose a district from {range_name}", options=options)
+    yes_button.callback = yes_callback
+    view.add_item(yes_button)
 
-            async def select_callback(interaction: discord.Interaction):
-                district = select.values[0]
-                user_alerts[interaction.user.id] = user_alerts.get(interaction.user.id, set())
-                user_alerts[interaction.user.id].add(district)
-                save_user_alerts()
-                await interaction.response.send_message(f"Alerts set for: {district}", ephemeral=True)
+    # "No" button to cancel
+    no_button = Button(label="No", style=discord.ButtonStyle.red)
+    async def no_callback(interaction: discord.Interaction):
+        await interaction.response.send_message("No district selected. Please try again with a different name.", ephemeral=True)
 
-            select.callback = select_callback
+    no_button.callback = no_callback
+    view.add_item(no_button)
 
-            # Create the view for the select menu and add the select item
-            select_view = discord.ui.View()
-            select_view.add_item(select)
-
-            await interaction.response.send_message(
-                f"Please select a district from {range_name}.", ephemeral=True, view=select_view
-            )
-
-    # Assign the button callback to the buttons
-    for button in buttons:
-        button.callback = button_callback
-
-    # Send the initial message with buttons
-    await interaction.response.send_message(
-        "Please choose a letter range to select your district:", ephemeral=True, view=view
-    )
+    await interaction.followup.send("Please select 'Yes' to confirm or 'No' to cancel.", view=view)
 
 # Slash command to check for closures (for testing purposes)
 @bot.tree.command(name="check", description="Check for current school closures.")
