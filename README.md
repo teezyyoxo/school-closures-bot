@@ -25,10 +25,6 @@ A Discord bot to send school closure updates and alerts based on districts from 
 
 ### 1. Clone this repository
 
-bash
-
-CopyEdit
-
 `git clone https://github.com/your-repo/SchoolClosuresBot.git
 cd SchoolClosuresBot` 
 
@@ -36,28 +32,16 @@ cd SchoolClosuresBot`
 
 Create a virtual environment (optional but recommended):
 
-bash
-
-CopyEdit
-
 `python3 -m venv venv
 source venv/bin/activate  # On Windows use 'venv\Scripts\activate'` 
 
 Install dependencies:
-
-bash
-
-CopyEdit
 
 `pip install -r requirements.txt` 
 
 ### 3. Configure the `.env` file
 
 Create a `.env` file in the root directory of the project, and include the following variables:
-
-bash
-
-CopyEdit
 
 `DISCORD_TOKEN=your_discord_bot_token
 CHANNEL_ID=your_discord_channel_id` 
@@ -82,10 +66,6 @@ This file stores the alerts for each user, mapping their Discord user ID to a li
 ### 7. Running the Bot
 
 To start the bot, simply run:
-
-bash
-
-CopyEdit
 
 `python bot.py` 
 
