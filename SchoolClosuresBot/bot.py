@@ -1,89 +1,156 @@
+# School Closures Bot
+# Currently configured for NBC Connecticut and all districts within.
+# Created by @PBandJamf
+
+# Version 2.0.2
+# - Fixed: Added functionality to properly handle saving and loading user alerts to/from user_alerts.json.
+# - Improved: The bot now properly serializes user alert data, converting sets to lists before saving to JSON.
+# - Added: The bot will now automatically create the user_alerts.json file if it doesn't exist and allow for persistent user alerts.
+# - Updated: The `/setalerts` command and `!check` responses work with the new user_alerts.json file for alert persistence.
+
+# Version 2.0.1
+# - Fixed: Handled the error when creating the select menu in the `/setalerts` command.
+# - Added: Added `on_message` event to handle `!check` and guide users to the `/setalerts` command in DMs.
+# - Improved: Bot now responds to `!check` command in DMs and sends school closure updates directly to users.
+# - Updated: DMs now prompt users to use the `/setalerts` slash command for setting up alerts.
+
+# Version 2.0.0
+# - Added: /setalerts slash command for users to configure their alerts privately.
+# - Improved: Alerts are now sent in DMs rather than publicly to avoid privacy concerns.
+# - Changed: Valid districts are now checked against the predefined list from districts.json before being accepted.
+# - Updated: General updates about closures now tag everyone in the channel but instruct users to DM the bot for private alerts.
+# - Fixed: User alert data is now saved and persisted in user_alerts.json.
+
+# Version 1.0.0
+# - Initial release.
+
 import discord
+from discord import app_commands
 import os
+import json
 from dotenv import load_dotenv
-# Ensure scraper.py is in the same directory and up-to-date
 from scraperNBC import fetch_school_closures
 
-# MAKE SURE YOU HAVE A .ENV IN THE SAME FOLDER, BECAUSE WE'RE LOADING IT HERE:
+# Load environment variables
 load_dotenv()
+TOKEN = os.getenv('DISCORD_TOKEN')
+CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
 
-TOKEN = os.getenv('DISCORD_TOKEN')  # Your bot token
-CHANNEL_ID = int(os.getenv('CHANNEL_ID'))  # Discord channel ID
-SEARCH_CRITERIA = [c.strip().lower() for c in os.getenv('SEARCH_CRITERIA', '').split(',')]  # Comma-separated list of criteria
+# Load school districts from JSON for validation
+districts_file = "districts.json"
+with open(districts_file, "r") as f:
+    VALID_DISTRICTS = set(json.load(f))
+
+# Use a JSON file for persistence of user alerts
+user_alerts_file = "user_alerts.json"
+
+def load_user_alerts():
+    if os.path.exists(user_alerts_file):
+        with open(user_alerts_file, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_user_alerts():
+    with open(user_alerts_file, "w") as f:
+        # Convert sets to lists
+        json.dump({user_id: list(districts) for user_id, districts in user_alerts.items()}, f, indent=4)
+
+user_alerts = load_user_alerts()
 
 class SchoolClosuresBot(discord.Client):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.tree = app_commands.CommandTree(self)
+
     async def on_ready(self):
-        """Triggered when the bot connects to Discord."""
         print(f'Logged in as {self.user}!')
         print(f'Bot is ready and listening for commands.')
-
-        # Debugging: Check if the bot can access the channel
-        channel = self.get_channel(CHANNEL_ID)
-        if channel:
-            print(f"Accessing channel: {channel.name} (ID: {CHANNEL_ID})")
-        else:
-            print(f"Failed to access channel: {CHANNEL_ID}. Ensure the channel ID is correct and the bot has permissions.")
+        await self.tree.sync()  # Sync slash commands
 
     async def send_school_closures(self, url):
-        """Fetch closures and send matching results to the Discord channel."""
-        print("Fetching school closures...")  # Debugging line to ensure the function is called
         channel = self.get_channel(CHANNEL_ID)
         if not channel:
             print("Channel not found. Check the CHANNEL_ID in your .env file.")
             return
 
-        closures = fetch_school_closures(url)  # Pass the URL here
-        if not closures:
-            await channel.send("No closures or delays at the moment.")
-            return
+        try:
+            closures = fetch_school_closures(url)
+            if not closures:
+                await channel.send("@everyone No closures or delays at the moment.")
+                return
 
-        found_closures = False
-        for closure in closures:
-            if any(criteria in closure['school'].lower() for criteria in SEARCH_CRITERIA):
-                await channel.send(f"{closure['school']}: {closure['status']}")
-                found_closures = True
+            await channel.send("@everyone Closures detected! DM me `!setalerts [district]` to set up private alerts for specific districts.")
+            
+            for user_id, districts in user_alerts.items():
+                user = await self.fetch_user(user_id)
+                matching_closures = [c for c in closures if c['school'].lower() in districts]
+                if matching_closures:
+                    message = "\n".join([f"{c['school']}: {c['status']}" for c in matching_closures])
+                    await user.send(f"Here are your school closure alerts:\n{message}")
+        except Exception as e:
+            await channel.send(f"An error occurred while fetching closures: {e}")
 
-        if not found_closures:
-            await channel.send("No closures match your criteria.")
-
-intents = discord.Intents.default()  # Basic bot permissions
+intents = discord.Intents.default()
 bot = SchoolClosuresBot(intents=intents)
 
-@bot.event
-@bot.event
+# Event handler to listen for messages
 @bot.event
 async def on_message(message):
-    # Ignore messages from the bot itself
     if message.author == bot.user:
         return
 
-    # Debugging line to show exact content of the message (including any invisible characters)
-    print(f"Received message: {repr(message.content)}")  # Debugging line with repr()
-    print(f"Message length: {len(message.content)}")  # Check the length to ensure it's non-empty
-    print(f"Channel ID: {message.channel.id}")  # Log the channel ID to verify
-    print(f"Message Author: {message.author}")  # Log the message author
-
-    # The live URL will always be used by default
-    url = "https://www.nbcconnecticut.com/weather/school-closings/"
-
-    # Handling message from DM channel
+    # Handle commands in DMs
     if isinstance(message.channel, discord.DMChannel):
-        print(f"Received Direct Message from @{message.author}: {message.content}")
+        if message.content.startswith("!setalerts"):
+            await message.channel.send("To set your alerts, use the `/setalerts` slash command.")
+        elif message.content == "!check":
+            url = "https://www.nbcconnecticut.com/weather/school-closings/"
+            await bot.send_school_closures(url)
+            await message.channel.send("School closures have been checked and alerts have been sent.")
+    
+    # Make sure to call the default on_message behavior for other commands
+    await bot.process_commands(message)
 
-    # Check if the message is the !check test command
-    if message.content.strip().lower() == '!check test':
-        print("Command !check test detected.")  # Debugging line
-        url = "https://web.archive.org/web/20241212072827/https://www.nbcconnecticut.com/weather/school-closings/"  # Test URL
-        print(f"Using test URL: {url}")  # Debugging line
+@bot.tree.command(name="setalerts", description="Set up your school closure alerts.")
+async def setalerts(interaction: discord.Interaction):
+    # Load the districts from the file
+    districts_file = "districts.json"
+    with open(districts_file, "r") as f:
+        VALID_DISTRICTS = json.load(f)  # Assuming it's just a list
 
-    # Check if the message is the !check command (live URL case)
-    elif message.content.strip().lower() == '!check':
-        print("Command !check detected.")  # Debugging line
-        print(f"Using live URL: {url}")  # Debugging line
+    # Create the select options
+    options = [discord.SelectOption(label=district.capitalize()) for district in VALID_DISTRICTS]
 
-    # Send the school closures with the correct URL
-    if message.content.strip().lower() == '!check' or message.content.strip().lower() == '!check test':
-        await bot.send_school_closures(url)
+    # Create the select menu
+    select = discord.ui.Select(placeholder="Choose a school district", options=options)
 
-# Start the bot
+    async def select_callback(interaction: discord.Interaction):
+        district = select.values[0].lower().strip()
+
+        if district not in VALID_DISTRICTS:
+            await interaction.response.send_message("Invalid district. Please select a valid district.", ephemeral=True)
+            return
+
+        user_alerts[interaction.user.id] = user_alerts.get(interaction.user.id, set())
+        user_alerts[interaction.user.id].add(district)
+        save_user_alerts()
+        await interaction.response.send_message(f"Alerts set for: {district.capitalize()}", ephemeral=True)
+
+    select.callback = select_callback
+
+    # Create the view and add the select menu to it
+    view = discord.ui.View()
+    view.add_item(select)
+
+    # Send the select menu to the user
+    await interaction.response.send_message("Please select a district to receive alerts.", ephemeral=True, view=view)
+
+# Slash command to check for closures (for testing purposes)
+@bot.tree.command(name="check", description="Check for current school closures.")
+async def check(interaction: discord.Interaction):
+    url = "https://www.nbcconnecticut.com/weather/school-closings/"
+    await bot.send_school_closures(url)
+    await interaction.response.send_message("School closures have been checked and alerts have been sent.")
+
+# Send it.
 bot.run(TOKEN)
